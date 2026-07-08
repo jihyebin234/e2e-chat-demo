@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>E2E 암호화 채팅 데모</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Socket Chat + End-to-End Encryption Demo</p>
+          <h1>서버는 전달만 하고, 내용은 브라우저끼리만 봅니다.</h1>
+          <p class="summary">
+            입장할 때 공개키를 교환하고, 메시지는 각 브라우저에서 AES-GCM으로 암호화한 뒤 WebSocket 서버가 암호문만 중계합니다.
+          </p>
+        </div>
+        <div class="status-card">
+          <span id="socketStatus" class="pill off">연결 전</span>
+          <strong id="myId">아직 입장하지 않음</strong>
+          <small>실제 서비스라면 사용자 인증과 공개키 검증이 추가로 필요합니다.</small>
+        </div>
+      </section>
+
+      <section class="layout">
+        <aside class="panel setup">
+          <h2>입장</h2>
+          <label>
+            이름
+            <input id="nameInput" maxlength="24" placeholder="예: 민수" />
+          </label>
+          <label>
+            방 이름
+            <input id="roomInput" maxlength="40" value="class-demo" />
+          </label>
+          <button id="joinBtn">채팅방 입장</button>
+
+          <div class="info-block">
+            <h3>키 교환 상태</h3>
+            <ul id="peerList" class="peer-list">
+              <li>아직 연결된 상대가 없습니다.</li>
+            </ul>
+          </div>
+
+          <div class="protocol">
+            <h3>소켓 프로토콜</h3>
+            <code>join</code>
+            <span>공개키 등록</span>
+            <code>peer-joined</code>
+            <span>상대 공개키 수신</span>
+            <code>encrypted-message</code>
+            <span>암호문 중계</span>
+          </div>
+        </aside>
+
+        <section class="panel chat">
+          <div class="chat-head">
+            <div>
+              <h2>암호화 채팅</h2>
+              <p>브라우저 창을 2개 열고 같은 방에 입장하면 테스트할 수 있습니다.</p>
+            </div>
+            <button id="openSecondBtn" class="ghost">새 창 열기</button>
+          </div>
+
+          <div id="messages" class="messages">
+            <div class="empty">
+              방에 입장하면 여기서 메시지를 주고받을 수 있습니다.
+            </div>
+          </div>
+
+          <form id="messageForm" class="composer">
+            <input id="messageInput" placeholder="메시지를 입력하세요" disabled />
+            <button id="sendBtn" disabled>암호화해서 보내기</button>
+          </form>
+        </section>
+
+        <aside class="panel server-panel">
+          <h2>서버가 보는 내용</h2>
+          <p>
+            서버는 누가 누구에게 보냈는지와 암호문, IV만 볼 수 있습니다. 평문은 서버로 전송되지 않습니다.
+          </p>
+          <div id="serverLog" class="server-log">
+            <div class="empty">아직 중계된 암호문이 없습니다.</div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
