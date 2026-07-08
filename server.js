@@ -8,6 +8,7 @@ import { WebSocketServer } from "ws";
 const root = fileURLToPath(new URL("./public", import.meta.url));
 const port = process.env.PORT || 3000;
 const rooms = new Map();
+const watchers = new Map();
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -25,6 +26,10 @@ function roomPeers(roomId) {
   return Array.from(rooms.get(roomId)?.values() || []);
 }
 
+function roomWatchers(roomId) {
+  return Array.from(watchers.get(roomId) || []);
+}
+
 function broadcast(roomId, packet, exceptId = null) {
   for (const peer of roomPeers(roomId)) {
     if (peer.id !== exceptId) {
@@ -33,7 +38,22 @@ function broadcast(roomId, packet, exceptId = null) {
   }
 }
 
+function broadcastObserved(roomId, packet) {
+  broadcast(roomId, packet);
+  for (const watcher of roomWatchers(roomId)) {
+    send(watcher, packet);
+  }
+}
+
 function leave(ws) {
+  if (ws.watchRoomId) {
+    const roomWatchers = watchers.get(ws.watchRoomId);
+    roomWatchers?.delete(ws);
+    if (roomWatchers?.size === 0) {
+      watchers.delete(ws.watchRoomId);
+    }
+  }
+
   if (!ws.clientId || !ws.roomId) return;
   const room = rooms.get(ws.roomId);
   if (!room) return;
@@ -107,6 +127,19 @@ wss.on("connection", (ws) => {
       return;
     }
 
+    if (packet.type === "admin-watch") {
+      const roomId = String(packet.room || "demo").slice(0, 40);
+      ws.watchRoomId = roomId;
+      if (!watchers.has(roomId)) watchers.set(roomId, new Set());
+      watchers.get(roomId).add(ws);
+      send(ws, {
+        type: "admin-ready",
+        room: roomId,
+        peers: roomPeers(roomId).map(({ id, name }) => ({ id, name }))
+      });
+      return;
+    }
+
     if (!ws.clientId || !ws.roomId) {
       send(ws, { type: "error", message: "먼저 방에 입장해야 합니다." });
       return;
@@ -128,7 +161,7 @@ wss.on("connection", (ws) => {
       const target = room?.get(packet.to);
       if (target) send(target.ws, relay);
 
-      broadcast(ws.roomId, {
+      broadcastObserved(ws.roomId, {
         type: "server-observed",
         from: ws.clientId,
         to: packet.to,
