@@ -117,6 +117,8 @@ wss.on("connection", (ws) => {
         type: "encrypted-message",
         from: ws.clientId,
         to: packet.to,
+        alg: packet.alg,
+        keyId: packet.keyId,
         ciphertext: packet.ciphertext,
         iv: packet.iv,
         sentAt: Date.now()
@@ -130,6 +132,8 @@ wss.on("connection", (ws) => {
         type: "server-observed",
         from: ws.clientId,
         to: packet.to,
+        alg: packet.alg,
+        keyId: packet.keyId,
         ciphertext: packet.ciphertext,
         iv: packet.iv,
         sentAt: relay.sentAt
