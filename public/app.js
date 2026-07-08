@@ -36,6 +36,7 @@ let activeRoom = params.get("room") || "class-demo";
 let messageSeq = 0;
 const peers = new Map();
 const messageDetails = new Map();
+const seenMessages = new Set();
 
 function toBase64(buffer) {
   const bytes = new Uint8Array(buffer);
@@ -83,10 +84,10 @@ function setConnected(connected) {
 }
 
 function updateComposer() {
-  const ready = !isAdminMode && socket?.readyState === WebSocket.OPEN && peers.size > 0;
-  messageInput.disabled = !ready;
-  sendBtn.disabled = !ready;
-  tamperBtn.disabled = !ready;
+  const joined = !isAdminMode && socket?.readyState === WebSocket.OPEN && Boolean(clientId);
+  messageInput.disabled = !joined;
+  sendBtn.disabled = !joined || peers.size === 0;
+  tamperBtn.disabled = !joined || peers.size === 0;
 }
 
 function clearEmpty(container) {
@@ -223,6 +224,11 @@ function aadFor(packet) {
 
 async function importPeer(peer) {
   if (peers.has(peer.id)) return;
+  for (const [id, existing] of peers.entries()) {
+    if (existing.publicKey === peer.publicKey) {
+      peers.delete(id);
+    }
+  }
 
   setFlow("public-key");
   const publicKey = await crypto.subtle.importKey(
@@ -378,6 +384,10 @@ async function handleSocketMessage(event) {
   }
 
   if (packet.type === "encrypted-message") {
+    const messageKey = `${packet.from}:${packet.to}:${packet.sentAt}:${packet.ciphertext}`;
+    if (seenMessages.has(messageKey)) return;
+    seenMessages.add(messageKey);
+
     try {
       const text = await decryptFromPeer(packet);
       const peerName = peers.get(packet.from)?.name || "상대";
@@ -404,8 +414,15 @@ async function handleSocketMessage(event) {
 messageForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const text = messageInput.value.trim();
-  if (!text || peers.size === 0) return;
+  if (!text) return;
+  if (peers.size === 0) {
+    addSystem("상대가 아직 없습니다. 새 창이나 초대 링크로 같은 방에 한 명 더 입장하세요.");
+    return;
+  }
 
+  const sentAt = Date.now();
+  const detailPackets = [];
+  const recipients = [];
   for (const peer of peers.values()) {
     const encrypted = await encryptPacket(peer, text);
     const packet = {
@@ -413,15 +430,17 @@ messageForm.addEventListener("submit", async (event) => {
       to: peer.id,
       ...encrypted
     };
+    detailPackets.push({ ...packet, from: clientId, sentAt, toName: peer.name });
+    recipients.push(peer.name);
     setFlow("encrypt");
     socket.send(JSON.stringify(packet));
-    addMessage(text, true, "나", {
-      packet: { ...packet, from: clientId, sentAt: Date.now() },
-      sentAt: Date.now(),
-      toName: peer.name
-    });
   }
 
+  addMessage(text, true, "나", {
+    packet: detailPackets[0],
+    sentAt,
+    toName: recipients.join(", ")
+  });
   messageInput.value = "";
 });
 
