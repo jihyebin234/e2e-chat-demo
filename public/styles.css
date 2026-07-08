@@ -156,6 +156,12 @@ h3 {
   line-height: 1.5;
 }
 
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
 .pill {
   width: fit-content;
   border-radius: 999px;
@@ -172,6 +178,49 @@ h3 {
 .pill.off {
   color: var(--orange);
   background: #fff3e4;
+}
+
+.flow-panel {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.flow-step {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 13px;
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.flow-step strong,
+.flow-step span {
+  display: block;
+}
+
+.flow-step strong {
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+
+.flow-step span {
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.flow-step.done {
+  border-color: rgba(36, 138, 61, 0.22);
+  background: rgba(232, 247, 237, 0.78);
+}
+
+.flow-step.active {
+  border-color: rgba(0, 113, 227, 0.36);
+  background: var(--blue-soft);
+  transform: translateY(-2px);
 }
 
 .layout {
@@ -278,6 +327,22 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.peer-list strong,
+.peer-list span,
+.peer-list small {
+  display: block;
+}
+
+.peer-list span {
+  margin: 4px 0;
+  color: var(--green);
+}
+
+.peer-list small {
+  color: var(--secondary);
+  font-size: 12px;
+}
+
 .protocol {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -343,6 +408,9 @@ code {
 }
 
 .message {
+  appearance: none;
+  display: block;
+  text-align: left;
   max-width: min(76%, 640px);
   border: 1px solid var(--line-soft);
   border-radius: 8px;
@@ -352,6 +420,7 @@ code {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
   line-height: 1.48;
   overflow-wrap: anywhere;
+  cursor: pointer;
 }
 
 .message.mine {
@@ -457,10 +526,123 @@ code {
   color: #c7c7cc;
 }
 
+.detail-dialog {
+  width: min(760px, calc(100% - 32px));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.24);
+}
+
+.detail-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+.detail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 18px;
+}
+
+.detail-head h2 {
+  margin: 0;
+}
+
+.detail-body {
+  padding: 18px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 10px 14px;
+  margin: 0;
+}
+
+.detail-grid dt {
+  color: var(--secondary);
+  font-weight: 700;
+}
+
+.detail-grid dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.mono {
+  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.plain {
+  font-weight: 700;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.admin-mode .chat,
+.admin-mode .setup .protocol,
+.admin-mode .setup label,
+.admin-mode #tamperBtn {
+  display: none;
+}
+
+.admin-mode .layout {
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+
+.admin-mode .server-panel {
+  min-height: 650px;
+}
+
+.presentation .hero h1 {
+  font-size: clamp(44px, 6vw, 74px);
+}
+
+.presentation .summary,
+.presentation .chat-head p,
+.presentation .server-panel p {
+  font-size: 19px;
+}
+
+.presentation .flow-panel {
+  grid-template-columns: repeat(5, minmax(160px, 1fr));
+}
+
+.presentation .flow-step {
+  padding: 18px;
+}
+
+.presentation .flow-step strong {
+  font-size: 16px;
+}
+
+.presentation .flow-step span {
+  font-size: 14px;
+}
+
 @media (max-width: 1120px) {
   .hero,
-  .layout {
+  .layout,
+  .admin-mode .layout {
     grid-template-columns: 1fr;
+  }
+
+  .flow-panel,
+  .presentation .flow-panel {
+    grid-template-columns: 1fr 1fr;
   }
 
   .panel {
@@ -486,6 +668,11 @@ code {
     font-size: 34px;
   }
 
+  .flow-panel,
+  .presentation .flow-panel {
+    grid-template-columns: 1fr;
+  }
+
   .chat-head,
   .composer {
     grid-template-columns: 1fr;
@@ -497,5 +684,9 @@ code {
 
   .message {
     max-width: 94%;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
   }
 }
