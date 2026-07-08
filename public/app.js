@@ -13,6 +13,10 @@ const sendBtn = $("#sendBtn");
 const serverLog = $("#serverLog");
 const openSecondBtn = $("#openSecondBtn");
 
+const ALGORITHM = "SwiftSeal-v1";
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
 let socket;
 let clientId;
 let keyPair;
@@ -41,10 +45,23 @@ async function createKeys() {
   keyPair = await crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
     true,
-    ["deriveKey"]
+    ["deriveBits"]
   );
   const rawPublicKey = await crypto.subtle.exportKey("raw", keyPair.publicKey);
   exportedPublicKey = toBase64(rawPublicKey);
+}
+
+async function sha256Base64(text) {
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(text));
+  return toBase64(digest);
+}
+
+function peerContext(peerPublicKey) {
+  return [exportedPublicKey, peerPublicKey].sort().join(".");
+}
+
+function aadFor(packet) {
+  return encoder.encode(`${ALGORITHM}|${packet.from}|${packet.to}|${packet.keyId}`);
 }
 
 async function importPeer(peer) {
@@ -58,30 +75,50 @@ async function importPeer(peer) {
     []
   );
 
-  const aesKey = await crypto.subtle.deriveKey(
+  const sharedBits = await crypto.subtle.deriveBits(
     { name: "ECDH", public: publicKey },
     keyPair.privateKey,
+    256
+  );
+  const context = peerContext(peer.publicKey);
+  const keyId = (await sha256Base64(`${ALGORITHM}:key-id:${context}`)).slice(0, 16);
+  const hkdfKey = await crypto.subtle.importKey("raw", sharedBits, "HKDF", false, ["deriveKey"]);
+  const salt = await crypto.subtle.digest("SHA-256", encoder.encode(`${ALGORITHM}:salt:${context}`));
+  const aesKey = await crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt,
+      info: encoder.encode(`${ALGORITHM}:aes-gcm:${context}`)
+    },
+    hkdfKey,
     { name: "AES-GCM", length: 256 },
     false,
     ["encrypt", "decrypt"]
   );
 
-  peers.set(peer.id, { ...peer, aesKey });
+  peers.set(peer.id, { ...peer, aesKey, keyId });
   renderPeers();
   updateComposer();
-  addSystem(`${peer.name} 님과 공유 암호키를 만들었습니다.`);
+  addSystem(`${peer.name} 님과 ${ALGORITHM} 공유키를 만들었습니다. keyId=${keyId}`);
 }
 
 async function encryptForPeer(peer, text) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encoded = new TextEncoder().encode(text);
+  const packetMeta = {
+    from: clientId,
+    to: peer.id,
+    keyId: peer.keyId
+  };
   const encrypted = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
+    { name: "AES-GCM", iv, additionalData: aadFor(packetMeta) },
     peer.aesKey,
-    encoded
+    encoder.encode(text)
   );
 
   return {
+    alg: ALGORITHM,
+    keyId: peer.keyId,
     ciphertext: toBase64(encrypted),
     iv: toBase64(iv)
   };
@@ -90,14 +127,21 @@ async function encryptForPeer(peer, text) {
 async function decryptFromPeer(packet) {
   const peer = peers.get(packet.from);
   if (!peer) throw new Error("키가 없는 상대입니다.");
+  if (packet.alg !== ALGORITHM || packet.keyId !== peer.keyId) {
+    throw new Error("지원하지 않는 암호 프로토콜입니다.");
+  }
 
   const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: new Uint8Array(fromBase64(packet.iv)) },
+    {
+      name: "AES-GCM",
+      iv: new Uint8Array(fromBase64(packet.iv)),
+      additionalData: aadFor(packet)
+    },
     peer.aesKey,
     fromBase64(packet.ciphertext)
   );
 
-  return new TextDecoder().decode(decrypted);
+  return decoder.decode(decrypted);
 }
 
 function setConnected(connected) {
@@ -140,7 +184,9 @@ function addServerPacket(packet) {
   item.className = "cipher";
   item.innerHTML = `
     <strong>${new Date(packet.sentAt).toLocaleTimeString()} 암호문 중계</strong>
-    <pre>from: ${packet.from}
+    <pre>alg: ${packet.alg || "unknown"}
+keyId: ${packet.keyId || "none"}
+from: ${packet.from}
 to: ${packet.to}
 iv: ${packet.iv}
 ciphertext: ${packet.ciphertext}</pre>
@@ -157,7 +203,7 @@ function renderPeers() {
 
   for (const peer of peers.values()) {
     const li = document.createElement("li");
-    li.textContent = `${peer.name} - 공유키 준비됨`;
+    li.textContent = `${peer.name} - ${ALGORITHM} / keyId ${peer.keyId}`;
     peerList.append(li);
   }
 }
