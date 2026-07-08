@@ -44,11 +44,13 @@
           </div>
 
           <div class="protocol">
-            <h3>소켓 프로토콜</h3>
+            <h3>SwiftSeal-v1 프로토콜</h3>
             <code>join</code>
             <span>공개키 등록</span>
-            <code>peer-joined</code>
-            <span>상대 공개키 수신</span>
+            <code>HKDF</code>
+            <span>공유 비밀에서 메시지 키 생성</span>
+            <code>AES-GCM</code>
+            <span>AAD로 메타데이터 변조 방지</span>
             <code>encrypted-message</code>
             <span>암호문 중계</span>
           </div>
@@ -78,7 +80,7 @@
         <aside class="panel server-panel">
           <h2>서버가 보는 내용</h2>
           <p>
-            서버는 누가 누구에게 보냈는지와 암호문, IV만 볼 수 있습니다. 평문은 서버로 전송되지 않습니다.
+            서버는 알고리즘 이름, keyId, 송수신자, 암호문, IV만 볼 수 있습니다. 평문과 공유키는 서버로 전송되지 않습니다.
           </p>
           <div id="serverLog" class="server-log">
             <div class="empty">아직 중계된 암호문이 없습니다.</div>
