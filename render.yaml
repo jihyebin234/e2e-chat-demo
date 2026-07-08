@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: e2e-chat-demo
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
