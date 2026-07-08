@@ -20,6 +20,34 @@
           <span id="socketStatus" class="pill off">연결 전</span>
           <strong id="myId">아직 입장하지 않음</strong>
           <small>실제 서비스라면 사용자 인증과 공개키 검증이 추가로 필요합니다.</small>
+          <div class="quick-actions">
+            <button id="inviteBtn" class="ghost" type="button">초대 링크</button>
+            <button id="adminBtn" class="ghost" type="button">관리자 보기</button>
+            <button id="presentBtn" class="ghost" type="button">발표 모드</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="flow-panel" aria-label="암호화 과정">
+        <div class="flow-step" data-step="public-key">
+          <strong>1. 공개키 교환</strong>
+          <span>브라우저끼리 공개키만 공유</span>
+        </div>
+        <div class="flow-step" data-step="shared-key">
+          <strong>2. 공유키 생성</strong>
+          <span>SwiftSeal-v1 HKDF 키 파생</span>
+        </div>
+        <div class="flow-step" data-step="encrypt">
+          <strong>3. 메시지 암호화</strong>
+          <span>AES-GCM + AAD</span>
+        </div>
+        <div class="flow-step" data-step="relay">
+          <strong>4. 서버 중계</strong>
+          <span>서버는 암호문만 확인</span>
+        </div>
+        <div class="flow-step" data-step="decrypt">
+          <strong>5. 복호화</strong>
+          <span>상대 브라우저에서만 평문 복원</span>
         </div>
       </section>
 
@@ -35,6 +63,7 @@
             <input id="roomInput" maxlength="40" value="class-demo" />
           </label>
           <button id="joinBtn">채팅방 입장</button>
+          <button id="tamperBtn" class="ghost" type="button" disabled>위조 메시지 데모</button>
 
           <div class="info-block">
             <h3>키 교환 상태</h3>
@@ -62,7 +91,7 @@
               <h2>암호화 채팅</h2>
               <p>브라우저 창을 2개 열고 같은 방에 입장하면 테스트할 수 있습니다.</p>
             </div>
-            <button id="openSecondBtn" class="ghost">새 창 열기</button>
+            <button id="openSecondBtn" class="ghost" type="button">새 창 열기</button>
           </div>
 
           <div id="messages" class="messages">
@@ -78,7 +107,7 @@
         </section>
 
         <aside class="panel server-panel">
-          <h2>서버가 보는 내용</h2>
+          <h2 id="serverTitle">서버가 보는 내용</h2>
           <p>
             서버는 알고리즘 이름, keyId, 송수신자, 암호문, IV만 볼 수 있습니다. 평문과 공유키는 서버로 전송되지 않습니다.
           </p>
@@ -87,6 +116,14 @@
           </div>
         </aside>
       </section>
+
+      <dialog id="detailDialog" class="detail-dialog">
+        <div class="detail-head">
+          <h2>메시지 암호화 상세</h2>
+          <button id="closeDetailBtn" class="ghost" type="button">닫기</button>
+        </div>
+        <div id="detailBody" class="detail-body"></div>
+      </dialog>
     </main>
 
     <script src="./app.js"></script>
